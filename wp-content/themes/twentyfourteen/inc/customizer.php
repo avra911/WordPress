@@ -30,6 +30,29 @@ function twentyfourteen_customize_register( $wp_customize ) {
 		'section'  => 'colors',
 		'settings' => 'accent_color',
 	) ) );
+
+	// Add the featured content section.
+	$wp_customize->add_section( 'featured_content', array(
+		'title'    => __( 'Featured Content', 'twentyfourteen' ),
+		'priority' => 120,
+	) );
+
+	// Add the featured content layout setting and control.
+	$wp_customize->add_setting( 'featured_content_layout', array(
+		'default'    => 'grid',
+		'type'       => 'theme_mod',
+		'capability' => 'edit_theme_options',
+	) );
+
+	$wp_customize->add_control( 'featured_content_layout', array(
+		'label'   => __( 'Layout', 'twentyfourteen' ),
+		'section' => 'featured_content',
+		'type'    => 'select',
+		'choices' => array(
+			'grid'   => __( 'Grid', 'twentyfourteen' ),
+			'slider' => __( 'Slider', 'twentyfourteen' ),
+		),
+	) );
 }
 add_action( 'customize_register', 'twentyfourteen_customize_register' );
 
@@ -55,8 +78,8 @@ add_action( 'customize_preview_init', 'twentyfourteen_customize_preview_js' );
 function twentyfourteen_generate_accent_colors( $color ) {
 	$color = sanitize_hex_color( $color );
 
-	set_theme_mod( 'accent_lighter', twentyfourteen_adjust_color( $color, 14 ) );
-	set_theme_mod( 'accent_much_lighter', twentyfourteen_adjust_color( $color, 71 ) );
+	set_theme_mod( 'accent_lighter', twentyfourteen_adjust_color( $color, 29 ) );
+	set_theme_mod( 'accent_much_lighter', twentyfourteen_adjust_color( $color, 49 ) );
 
 	return $color;
 }
@@ -115,38 +138,29 @@ function twentyfourteen_customizer_styles() {
 	$accent_much_lighter = get_theme_mod( 'accent_much_lighter' );
 
 	$css = '/* Custom accent color. */
-		h1 a:hover,
-		h2 a:hover,
-		h3 a:hover,
-		h4 a:hover,
-		h5 a:hover,
-		h6 a:hover,
 		a,
-		.entry-title a:hover,
-		.cat-links a:hover,
-		.site-content .post-navigation a:hover,
-		.site-content .image-navigation a:hover,
-		.comment-author a:hover,
-		.comment-metadata a:hover,
-		.comment-list .trackback a:hover,
-		.comment-list .pingback a:hover,
-		.paging-navigation .page-numbers.current,
-		.content-sidebar.widget-area a:hover,
-		.content-sidebar .widget_twentyfourteen_ephemera .post-format-archive-link {
+		.content-sidebar .widget a {
 			color: ' . $accent_color . ';
 		}
 
 		button,
-		html input[type="button"],
+		.contributor-posts-link,
+		input[type="button"],
 		input[type="reset"],
 		input[type="submit"],
-		.hentry .mejs-controls .mejs-time-rail .mejs-time-current,
-		.header-extra,
 		.search-toggle,
-		.primary-navigation ul ul,
-		.primary-navigation li:hover > a,
-		.page-links a:hover,
-		.widget_calendar tbody a {
+		.hentry .mejs-controls .mejs-time-rail .mejs-time-current,
+		.widget button,
+		.widget input[type="button"],
+		.widget input[type="reset"],
+		.widget input[type="submit"],
+		.widget_calendar tbody a,
+		.content-sidebar .widget input[type="button"],
+		.content-sidebar .widget input[type="reset"],
+		.content-sidebar .widget input[type="submit"],
+		.slider-control-paging .slider-active:before,
+		.slider-control-paging .slider-active:hover:before,
+		.slider-direction-nav a:hover {
 			background-color: ' . $accent_color . ';
 		}
 
@@ -158,48 +172,127 @@ function twentyfourteen_customizer_styles() {
 			background: ' . $accent_color . ';
 		}
 
-		.page-links a:hover,
 		.paging-navigation .page-numbers.current {
 			border-color: ' .  $accent_color . ';
 		}
 
+		@media screen and (min-width: 782px) {
+			.primary-navigation li:hover > a,
+			.primary-navigation li.focus > a,
+			.primary-navigation ul ul {
+				background-color: ' . $accent_color . ';
+			}
+		}
+
+		@media screen and (min-width: 1008px) {
+			.secondary-navigation li:hover > a,
+			.secondary-navigation li.focus > a,
+			.secondary-navigation ul ul {
+				background-color: ' . $accent_color . ';
+			}
+		}
+
 		/* Generated variant of custom accent color: slightly lighter. */
+		button:hover,
+		button:focus,
+		.contributor-posts-link:hover,
+		input[type="button"]:hover,
+		input[type="button"]:focus,
+		input[type="reset"]:hover,
+		input[type="reset"]:focus,
+		input[type="submit"]:hover,
+		input[type="submit"]:focus,
 		.search-toggle:hover,
 		.search-toggle.active,
 		.search-box,
-		button:hover,
-		html input[type="button"]:hover,
-		input[type="reset"]:hover,
-		input[type="submit"]:hover,
-		button:focus,
-		html input[type="button"]:focus,
-		input[type="reset"]:focus,
-		input[type="submit"]:focus,
-		.widget_calendar tbody a:hover {
+		.entry-meta .tag-links a:hover,
+		.widget input[type="button"]:hover,
+		.widget input[type="button"]:focus,
+		.widget input[type="reset"]:hover,
+		.widget input[type="reset"]:focus,
+		.widget input[type="submit"]:hover,
+		.widget input[type="submit"]:focus,
+		.widget_calendar tbody a:hover,
+		.content-sidebar .widget input[type="button"]:hover,
+		.content-sidebar .widget input[type="button"]:focus,
+		.content-sidebar .widget input[type="reset"]:hover,
+		.content-sidebar .widget input[type="reset"]:focus,
+		.content-sidebar .widget input[type="submit"]:hover,
+		.content-sidebar .widget input[type="submit"]:focus,
+		.slider-control-paging a:hover:before {
 			background-color: ' . $accent_lighter . ';
+		}
+
+		a:active,
+		a:hover,
+		.site-navigation a:hover,
+		.entry-title a:hover,
+		.entry-meta a:hover,
+		.cat-links a:hover,
+		.entry-content .edit-link a:hover,
+		.page-links a:hover,
+		.post-navigation a:hover,
+		.image-navigation a:hover,
+		.comment-author a:hover,
+		.comment-list .pingback a:hover,
+		.comment-list .trackback a:hover,
+		.comment-metadata a:hover,
+		.comment-reply-title small a:hover,
+		.widget a:hover,
+		.widget-title a:hover,
+		.content-sidebar .widget a:hover,
+		.content-sidebar .widget .widget-title a:hover,
+		.content-sidebar .widget_twentyfourteen_ephemera .entry-meta a:hover,
+		.site-info a:hover,
+		.featured-content a:hover {
+			color: ' . $accent_lighter . ';
+		}
+
+		.page-links a:hover,
+		.paging-navigation a:hover {
+			border-color: ' . $accent_lighter . ';
+		}
+
+		.tag-links a:hover:before {
+			border-right-color: ' . $accent_lighter . ';
+		}
+
+		@media screen and (min-width: 782px) {
+			.primary-navigation ul ul a:hover,
+			.primary-navigation ul ul li.focus > a {
+				background-color: ' . $accent_lighter . ';
+			}
+		}
+
+		@media screen and (min-width: 1008px) {
+			.secondary-navigation ul ul a:hover,
+			.secondary-navigation ul ul li.focus > a {
+				background-color: ' . $accent_lighter . ';
+			}
 		}
 
 		/* Generated variant of custom accent color: much lighter. */
 		button:active,
-		html input[type="button"]:active,
+		.contributor-posts-link:active,
+		input[type="button"]:active,
 		input[type="reset"]:active,
-		input[type="submit"]:active {
+		input[type="submit"]:active,
+		.widget input[type="button"]:active,
+		.widget input[type="reset"]:active,
+		.widget input[type="submit"]:active,
+		.content-sidebar .widget input[type="button"]:active,
+		.content-sidebar .widget input[type="reset"]:active,
+		.content-sidebar .widget input[type="submit"]:active {
 			background-color: ' . $accent_much_lighter . ';
 		}
 
-		a:hover,
-		a:focus,
-		a:active,
-		.primary-navigation li.current_page_item > a,
-		.primary-navigation li.current-menu-item > a,
-		.secondary-navigation a:hover,
-		#secondary .current_page_item > a,
-		#secondary .current-menu-item > a,
-		.featured-content a:hover,
-		.featured-content .more-link,
-		.widget-area a:hover {
+		.site-navigation .current_page_item > a,
+		.site-navigation .current_page_ancestor > a,
+		.site-navigation .current-menu-item > a,
+		.site-navigation .current-menu-ancestor > a {
 			color: ' . $accent_much_lighter . ';
 		}';
+
 
 	wp_add_inline_style( 'twentyfourteen-style', $css );
 }

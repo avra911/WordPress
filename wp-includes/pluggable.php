@@ -1645,14 +1645,15 @@ function get_avatar( $id_or_email, $size = '96', $default = '', $alt = false ) {
 		if ( ! empty( $id_or_email->comment_type ) && ! in_array( $id_or_email->comment_type, (array) $allowed_comment_types ) )
 			return false;
 
-		if ( !empty($id_or_email->user_id) ) {
+		if ( ! empty( $id_or_email->user_id ) ) {
 			$id = (int) $id_or_email->user_id;
 			$user = get_userdata($id);
-			if ( $user)
+			if ( $user )
 				$email = $user->user_email;
-		} elseif ( !empty($id_or_email->comment_author_email) ) {
-			$email = $id_or_email->comment_author_email;
 		}
+
+		if ( ! $email && ! empty( $id_or_email->comment_author_email ) )
+			$email = $id_or_email->comment_author_email;
 	} else {
 		$email = $id_or_email;
 	}
@@ -1700,6 +1701,7 @@ function get_avatar( $id_or_email, $size = '96', $default = '', $alt = false ) {
 		if ( !empty( $rating ) )
 			$out .= "&amp;r={$rating}";
 
+		$out = str_replace( '&#038;', '&amp;', esc_url( $out ) );
 		$avatar = "<img alt='{$safe_alt}' src='{$out}' class='avatar avatar-{$size} photo' height='{$size}' width='{$size}' />";
 	} else {
 		$avatar = "<img alt='{$safe_alt}' src='{$default}' class='avatar avatar-{$size} photo avatar-default' height='{$size}' width='{$size}' />";

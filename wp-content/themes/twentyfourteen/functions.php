@@ -68,9 +68,9 @@ function twentyfourteen_setup() {
 	add_theme_support( 'post-thumbnails' );
 
 	// Add several sizes for Post Thumbnails.
-	add_image_size( 'featured-thumbnail-large', 672, 0 );
-	add_image_size( 'featured-thumbnail-featured', 672, 372, true );
-	add_image_size( 'featured-thumbnail-formatted', 306, 0 );
+	add_image_size( 'post-thumbnail-slider', 1038, 576, true );
+	add_image_size( 'post-thumbnail-grid', 672, 372, true );
+	add_image_size( 'post-thumbnail', 672, 0 );
 
 	// This theme uses wp_nav_menu() in two locations.
 	register_nav_menus( array(
@@ -118,14 +118,14 @@ endif; // twentyfourteen_setup
 add_action( 'after_setup_theme', 'twentyfourteen_setup' );
 
 /**
- * Adjust content_width value for full-width and attachment templates.
+ * Adjust content_width value for image attachment template.
  *
  * @since Twenty Fourteen 1.0
  *
  * @return void
  */
 function twentyfourteen_content_width() {
-	if ( is_attachment() )
+	if ( is_attachment() && wp_attachment_is_image() )
 		$GLOBALS['content_width'] = 810;
 }
 add_action( 'template_redirect', 'twentyfourteen_content_width' );
@@ -220,12 +220,11 @@ function twentyfourteen_font_url() {
  * @return void
  */
 function twentyfourteen_scripts() {
-
 	// Add Lato font, used in the main stylesheet.
-	wp_enqueue_style( 'twentyfourteen-lato' );
+	wp_enqueue_style( 'twentyfourteen-lato', twentyfourteen_font_url(), array(), null );
 
 	// Add Genericons font, used in the main stylesheet.
-	wp_enqueue_style( 'genericons', get_template_directory_uri() . '/fonts/genericons.css', array(), '3.0' );
+	wp_enqueue_style( 'genericons', get_template_directory_uri() . '/fonts/genericons.css', array(), '3.0.2' );
 
 	// Loads our main stylesheet.
 	wp_enqueue_style( 'twentyfourteen-style', get_stylesheet_uri() );
@@ -239,10 +238,10 @@ function twentyfourteen_scripts() {
 	if ( is_active_sidebar( 'sidebar-3' ) )
 		wp_enqueue_script( 'jquery-masonry' );
 
-	wp_enqueue_script( 'twentyfourteen-theme', get_template_directory_uri() . '/js/theme.js', array( 'jquery' ), '20130820', true );
+	if ( 'slider' == get_theme_mod( 'featured_content_layout' ) )
+		wp_enqueue_script( 'twentyfourteen-slider', get_template_directory_uri() . '/js/slider.js', array( 'jquery' ), '20131028', true );
 
-	// Add Lato font used in the main stylesheet.
-	wp_enqueue_style( 'twentyfourteen-lato', twentyfourteen_font_url(), array(), null );
+	wp_enqueue_script( 'twentyfourteen-script', get_template_directory_uri() . '/js/functions.js', array( 'jquery' ), '20131102', true );
 }
 add_action( 'wp_enqueue_scripts', 'twentyfourteen_scripts' );
 
@@ -337,7 +336,7 @@ function twentyfourteen_list_authors() {
 	?>
 
 	<div class="contributor">
-		<div class="contributor-info clear">
+		<div class="contributor-info">
 			<div class="contributor-avatar"><?php echo get_avatar( $contributor_id, 132 ); ?></div>
 			<div class="contributor-summary">
 				<h2 class="contributor-name"><?php echo get_the_author_meta( 'display_name', $contributor_id ); ?></h2>
@@ -357,90 +356,16 @@ function twentyfourteen_list_authors() {
 endif;
 
 /**
- * Get recent formatted posts that are not featured in Featured Content area.
- *
- * @since Twenty Fourteen 1.0
- *
- * @return object WP_Query
- */
-function twentyfourteen_get_recent( $post_format ) {
-	$args = array(
-		'order' => 'DESC',
-		'ignore_sticky_posts' => 1,
-		'posts_per_page' => 2,
-		'tax_query' => array(
-			array(
-				'taxonomy' => 'post_format',
-				'terms' => array( $post_format ),
-				'field' => 'slug',
-				'operator' => 'IN',
-			),
-		),
-		'no_found_rows' => true,
-	);
-
-	$featured_posts = twentyfourteen_get_featured_posts();
-
-	if ( is_array( $featured_posts ) && ! empty( $featured_posts ) )
-		$args['post__not_in'] = wp_list_pluck( $featured_posts, 'ID' );
-
-	return new WP_Query( $args );
-}
-
-/**
- * Filter the home page posts, and remove formatted posts visible in the sidebar from it
- *
- * @since Twenty Fourteen 1.0
- *
- * @return void
- */
-function twentyfourteen_pre_get_posts( $query ) {
-	// Bail if not home, not a query, not main query.
-	if ( ! $query->is_main_query() || is_admin() )
-		return;
-
-	// Only on the home page
-	if ( $query->is_home() ) {
-		$exclude_ids = array();
-
-		$videos = twentyfourteen_get_recent( 'post-format-video' );
-		$images = twentyfourteen_get_recent( 'post-format-image' );
-		$galleries = twentyfourteen_get_recent( 'post-format-gallery' );
-		$asides = twentyfourteen_get_recent( 'post-format-aside' );
-		$links = twentyfourteen_get_recent( 'post-format-link' );
-		$quotes = twentyfourteen_get_recent( 'post-format-quote' );
-
-		foreach ( $videos->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		foreach ( $images->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		foreach ( $galleries->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		foreach ( $asides->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		foreach ( $links->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		foreach ( $quotes->posts as $post )
-			$exclude_ids[] = $post->ID;
-
-		$query->set( 'post__not_in', $exclude_ids );
-	}
-}
-add_action( 'pre_get_posts', 'twentyfourteen_pre_get_posts' );
-
-/**
  * Extend the default WordPress body classes.
  *
  * Adds body classes to denote:
  * 1. Single or multiple authors.
- * 2. Index views.
- * 3. Full-width content layout.
- * 4. Presence of footer widgets.
+ * 2. Presense of header image.
+ * 3. Index views.
+ * 4. Full-width content layout.
+ * 5. Presence of footer widgets.
+ * 6. Single views.
+ * 7. Featured content layout.
  *
  * @since Twenty Fourteen 1.0
  *
@@ -450,6 +375,11 @@ add_action( 'pre_get_posts', 'twentyfourteen_pre_get_posts' );
 function twentyfourteen_body_classes( $classes ) {
 	if ( is_multi_author() )
 		$classes[] = 'group-blog';
+
+	if ( get_header_image() )
+		$classes[] = 'header-image';
+	else
+		$classes[] = 'masthead-fixed';
 
 	if ( is_archive() || is_search() || is_home() )
 		$classes[] = 'list-view';
@@ -463,6 +393,14 @@ function twentyfourteen_body_classes( $classes ) {
 	if ( is_active_sidebar( 'sidebar-3' ) )
 		$classes[] = 'footer-widgets';
 
+	if ( is_singular() )
+		$classes[] = 'singular';
+
+	if ( is_front_page() && 'slider' == get_theme_mod( 'featured_content_layout' ) )
+		$classes[] = 'slider';
+	elseif ( is_front_page() )
+		$classes[] = 'grid';
+
 	return $classes;
 }
 add_filter( 'body_class', 'twentyfourteen_body_classes' );
@@ -471,7 +409,7 @@ add_filter( 'body_class', 'twentyfourteen_body_classes' );
  * Extend the default WordPress post classes.
  *
  * Adds a post class to denote:
- * Non-password protected page with a featured image.
+ * Non-password protected page with a post thumbnail.
  *
  * @since Twenty Fourteen 1.0
  *
@@ -480,7 +418,9 @@ add_filter( 'body_class', 'twentyfourteen_body_classes' );
  */
 function twentyfourteen_post_classes( $classes ) {
 	if ( ! post_password_required() && has_post_thumbnail() )
-		$classes[] = 'has-featured-image';
+		$classes[] = 'has-post-thumbnail';
+	else
+		$classes[] = 'no-post-thumbnail';
 
 	return $classes;
 }

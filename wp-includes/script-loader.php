@@ -332,6 +332,8 @@ function wp_default_scripts( &$scripts ) {
 
 	$scripts->add( 'user-suggest', "/wp-admin/js/user-suggest$suffix.js", array( 'jquery-ui-autocomplete' ), false, 1 );
 
+	$scripts->add( 'about', "/wp-admin/js/about$suffix.js", array( 'jquery', 'password-strength-meter' ), false, 1 );
+
 	$scripts->add( 'admin-bar', "/wp-includes/js/admin-bar$suffix.js", array(), false, 1 );
 
 	$scripts->add( 'wplink', "/wp-includes/js/wplink$suffix.js", array( 'jquery', 'wpdialogs' ), false, 1 );
@@ -688,13 +690,16 @@ function wp_style_loader_src( $src, $handle ) {
  * print_footer_scripts() is called in the footer to print these scripts.
  *
  * @since 2.8
+ *
  * @see wp_print_scripts()
  */
 function print_head_scripts() {
 	global $wp_scripts, $concatenate_scripts;
 
-	if ( ! did_action('wp_print_scripts') )
-		do_action('wp_print_scripts');
+	if ( ! did_action('wp_print_scripts') ) {
+		/** This action is documented in wp-includes/functions.wp-scripts.php */
+		do_action( 'wp_print_scripts' );
+	}
 
 	if ( !is_a($wp_scripts, 'WP_Scripts') )
 		$wp_scripts = new WP_Scripts();
@@ -772,8 +777,10 @@ function _print_scripts() {
  * @since 2.8
  */
 function wp_print_head_scripts() {
-	if ( ! did_action('wp_print_scripts') )
-		do_action('wp_print_scripts');
+	if ( ! did_action('wp_print_scripts') ) {
+		/** This action is documented in wp-includes/functions.wp-scripts.php */
+		do_action( 'wp_print_scripts' );
+	}
 
 	global $wp_scripts;
 

@@ -136,13 +136,6 @@ class Plugin_Upgrader_Skin extends WP_Upgrader_Skin {
 		if ( ! empty($update_actions) )
 			$this->feedback(implode(' | ', (array)$update_actions));
 	}
-
-	function before() {
-		if ( $this->upgrader->show_before ) {
-			echo $this->upgrader->show_before;
-			$this->upgrader->show_before = '';
-		}
-	}
 }
 
 /**
@@ -583,7 +576,7 @@ class Language_Pack_Upgrader_Skin extends WP_Upgrader_Skin {
 /**
  * Upgrader Skin for Automatic WordPress Upgrades
  *
- * This skin is designed to be used when no output is intended, all output 
+ * This skin is designed to be used when no output is intended, all output
  * is captured and stored for the caller to process and log/email/discard.
  *
  * @package WordPress
@@ -591,7 +584,7 @@ class Language_Pack_Upgrader_Skin extends WP_Upgrader_Skin {
  * @since 3.7.0
  */
 class Automatic_Upgrader_Skin extends WP_Upgrader_Skin {
-	private $messages = array();
+	protected $messages = array();
 
 	function request_filesystem_credentials( $error = false, $context = '' ) {
 		if ( $context )
@@ -599,7 +592,6 @@ class Automatic_Upgrader_Skin extends WP_Upgrader_Skin {
 		// TODO: fix up request_filesystem_credentials(), or split it, to allow us to request a no-output version
 		// This will output a credentials form in event of failure, We don't want that, so just hide with a buffer
 		ob_start();
-		set_current_screen( 'tools' ); // Only here to avoid PHP Notices from screen_icon() which is used within that HTML
 		$result = parent::request_filesystem_credentials( $error );
 		ob_end_clean();
 		return $result;

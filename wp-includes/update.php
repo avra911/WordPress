@@ -17,7 +17,7 @@
  * @since 2.3.0
  * @uses $wp_version Used to check against the newest WordPress version.
  *
- * @param array $extra_stats Extra statistics to report to the WordPress.org API. 
+ * @param array $extra_stats Extra statistics to report to the WordPress.org API.
  * @return mixed Returns null if update is unsupported. Returns false if check is too soon.
  */
 function wp_version_check( $extra_stats = array() ) {
@@ -93,8 +93,8 @@ function wp_version_check( $extra_stats = array() ) {
 	if ( $extra_stats )
 		$post_body = array_merge( $post_body, $extra_stats );
 
-	$url = 'http://api.wordpress.org/core/version-check/1.7/?' . http_build_query( $query, null, '&' );
-	if ( wp_http_supports( array( 'ssl' ) ) )
+	$url = $http_url = 'http://api.wordpress.org/core/version-check/1.7/?' . http_build_query( $query, null, '&' );
+	if ( $ssl = wp_http_supports( array( 'ssl' ) ) )
 		$url = set_url_scheme( $url, 'https' );
 
 	$options = array(
@@ -108,6 +108,10 @@ function wp_version_check( $extra_stats = array() ) {
 	);
 
 	$response = wp_remote_post( $url, $options );
+	if ( $ssl && is_wp_error( $response ) ) {
+		trigger_error( __( 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="http://wordpress.org/support/">support forums</a>.' ) . ' ' . '(WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.)', headers_sent() || WP_DEBUG ? E_USER_WARNING : E_USER_NOTICE );
+		$response = wp_remote_post( $http_url, $options );
+	}
 
 	if ( is_wp_error( $response ) || 200 != wp_remote_retrieve_response_code( $response ) )
 		return false;
@@ -131,7 +135,7 @@ function wp_version_check( $extra_stats = array() ) {
 				$offer[ $offer_key ] = esc_html( $value );
 		}
 		$offer = (object) array_intersect_key( $offer, array_fill_keys( array( 'response', 'download', 'locale',
-			'packages', 'current', 'version', 'php_version', 'mysql_version', 'new_bundled', 'partial_version' ), '' ) );
+			'packages', 'current', 'version', 'php_version', 'mysql_version', 'new_bundled', 'partial_version', 'notify_email' ), '' ) );
 	}
 
 	$updates = new stdClass();
@@ -246,11 +250,15 @@ function wp_update_plugins() {
 		'user-agent' => 'WordPress/' . $wp_version . '; ' . get_bloginfo( 'url' )
 	);
 
-	$url = 'http://api.wordpress.org/plugins/update-check/1.1/';
-	if ( wp_http_supports( array( 'ssl' ) ) )
+	$url = $http_url = 'http://api.wordpress.org/plugins/update-check/1.1/';
+	if ( $ssl = wp_http_supports( array( 'ssl' ) ) )
 		$url = set_url_scheme( $url, 'https' );
 
 	$raw_response = wp_remote_post( $url, $options );
+	if ( $ssl && is_wp_error( $raw_response ) ) {
+		trigger_error( __( 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="http://wordpress.org/support/">support forums</a>.' ) . ' ' . '(WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.)', headers_sent() || WP_DEBUG ? E_USER_WARNING : E_USER_NOTICE );
+		$raw_response = wp_remote_post( $http_url, $options );
+	}
 
 	if ( is_wp_error( $raw_response ) || 200 != wp_remote_retrieve_response_code( $raw_response ) )
 		return false;
@@ -382,11 +390,15 @@ function wp_update_themes() {
 		'user-agent'	=> 'WordPress/' . $wp_version . '; ' . get_bloginfo( 'url' )
 	);
 
-	$url = 'http://api.wordpress.org/themes/update-check/1.1/';
-	if ( wp_http_supports( array( 'ssl' ) ) )
+	$url = $http_url = 'http://api.wordpress.org/themes/update-check/1.1/';
+	if ( $ssl = wp_http_supports( array( 'ssl' ) ) )
 		$url = set_url_scheme( $url, 'https' );
 
 	$raw_response = wp_remote_post( $url, $options );
+	if ( $ssl && is_wp_error( $raw_response ) ) {
+		trigger_error( __( 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="http://wordpress.org/support/">support forums</a>.' ) . ' ' . '(WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.)', headers_sent() || WP_DEBUG ? E_USER_WARNING : E_USER_NOTICE );
+		$raw_response = wp_remote_post( $http_url, $options );
+	}
 
 	if ( is_wp_error( $raw_response ) || 200 != wp_remote_retrieve_response_code( $raw_response ) )
 		return false;
@@ -406,18 +418,16 @@ function wp_update_themes() {
 }
 
 /**
- * Cron entry which runs the WordPress Automatic Updates
+ * Performs WordPress automatic background updates.
  *
  * @since 3.7.0
  */
-function wp_auto_updates_maybe_update() {
+function wp_maybe_auto_update() {
 	include_once ABSPATH . '/wp-admin/includes/admin.php';
 	include_once ABSPATH . '/wp-admin/includes/class-wp-upgrader.php';
 
-	if ( WP_Automatic_Upgrader::upgrader_disabled() )
-		return;
-
-	WP_Automatic_Upgrader::perform_auto_updates();
+	$upgrader = new WP_Automatic_Updater;
+	$upgrader->run();
 }
 
 /**
@@ -565,9 +575,17 @@ function wp_schedule_update_checks() {
 	if ( !wp_next_scheduled('wp_update_themes') && !defined('WP_INSTALLING') )
 		wp_schedule_event(time(), 'twicedaily', 'wp_update_themes');
 
-	if ( !wp_next_scheduled( 'wp_auto_updates_maybe_update' ) && ! defined( 'WP_INSTALLING' ) )
-		wp_schedule_event( time(), 'twicedaily', 'wp_auto_updates_maybe_update' );
-
+	if ( ! wp_next_scheduled( 'wp_maybe_auto_update' ) && ! defined( 'WP_INSTALLING' ) ) {
+		// Schedule auto updates for 7 a.m. and 7 p.m. in the timezone of the site.
+		$next = strtotime( 'today 7am' );
+		$now = time();
+		// Find the next instance of 7 a.m. or 7 p.m., but skip it if it is within 3 hours from now.
+		while ( ( $now + 3 * HOUR_IN_SECONDS ) > $next ) {
+			$next += 12 * HOUR_IN_SECONDS;
+		}
+		$next = $next - get_option( 'gmt_offset' ) * HOUR_IN_SECONDS;
+		wp_schedule_event( $next, 'twicedaily', 'wp_maybe_auto_update' );
+	}
 }
 
 if ( ( ! is_main_site() && ! is_network_admin() ) || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) )
@@ -591,7 +609,6 @@ add_action( 'admin_init', '_maybe_update_themes' );
 add_action( 'wp_update_themes', 'wp_update_themes' );
 add_action( 'upgrader_process_complete', 'wp_update_themes' );
 
-// Automatic Updates - Cron callback
-add_action( 'wp_auto_updates_maybe_update', 'wp_auto_updates_maybe_update' );
+add_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 
 add_action('init', 'wp_schedule_update_checks');
